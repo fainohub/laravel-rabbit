@@ -1,0 +1,160 @@
+version: "3.3"
+
+services:
+  rabbitmq.core.dev:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq.core.dev
+    volumes:
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  redis.core.local:
+    container_name: redis.core.local
+    image: redis
+    command: redis-server
+    ports:
+      - 6300:6379
+    networks:
+      - pp-network
+
+  mysql.core.local:
+    container_name: mysql.core.local
+    image: mysql:5.7
+    ports:
+      - 3320:3306
+    environment:
+      MYSQL_DATABASE: ${DB_CORE_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_CORE_PASSWORD}
+      MYSQL_PASSWORD: ${DB_CORE_PASSWORD}
+      MYSQL_USER: ${DB_CORE_USERNAME}
+    networks:
+      - pp-network
+
+  mysql.transation.local:
+    container_name: mysql.transation.local
+    image: mysql:5.7
+    ports:
+      - 3321:3306
+    environment:
+      MYSQL_DATABASE: ${DB_TRANSACTION_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_TRANSACTION_PASSWORD}
+      MYSQL_PASSWORD: ${DB_TRANSACTION_PASSWORD}
+      MYSQL_USER: ${DB_TRANSACTION_USERNAME}
+    networks:
+      - pp-network
+
+  mysql.wallet.local:
+    container_name: mysql.wallet.local
+    image: mysql:5.7
+    ports:
+      - 3322:3306
+    environment:
+      MYSQL_DATABASE: ${DB_WALLET_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_WALLET_PASSWORD}
+      MYSQL_PASSWORD: ${DB_WALLET_PASSWORD}
+      MYSQL_USER: ${DB_WALLET_USERNAME}
+    networks:
+      - pp-network
+
+  php.core.local:
+    build:
+      args:
+        user: core
+        uid: 1000
+      context: ./docker/php
+      dockerfile: Dockerfile
+    image: php72-core
+    container_name: php.core.local
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./core:/var/www
+      - ./docker/xdebug/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    environment:
+      - COMPOSER_MEMORY_LIMIT=-1
+    networks:
+      - pp-network
+
+  php.transaction.local:
+    build:
+      args:
+        user: transaction
+        uid: 1000
+      context: ./docker/php
+      dockerfile: Dockerfile
+    image: php72-core
+    container_name: php.transaction.local
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./transaction:/var/www
+      - ./docker/xdebug/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    environment:
+      - COMPOSER_MEMORY_LIMIT=-1
+    networks:
+      - pp-network
+
+  php.wallet.local:
+    build:
+      args:
+        user: wallet
+        uid: 1000
+      context: ./docker/php
+      dockerfile: Dockerfile
+    image: php72-core
+    container_name: php.wallet.local
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./wallet:/var/www
+      - ./docker/xdebug/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    environment:
+      - COMPOSER_MEMORY_LIMIT=-1
+    networks:
+      - pp-network
+
+  web.core.local:
+    container_name: web.core.local
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - 9010:80
+    volumes:
+      - ./core:/var/www
+      - ./docker/nginx/core:/etc/nginx/conf.d
+    networks:
+      - pp-network
+
+  web.transaction.local:
+    container_name: web.transaction.local
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - 9011:80
+    volumes:
+      - ./transaction:/var/www
+      - ./docker/nginx/transaction:/etc/nginx/conf.d
+    networks:
+      - pp-network
+
+  web.wallet.local:
+    container_name: web.wallet.local
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - 9012:80
+    volumes:
+      - ./wallet:/var/www
+      - ./docker/nginx/wallet:/etc/nginx/conf.d
+    networks:
+      - pp-network
+
+networks:
+  pp-network:
+    external: true
